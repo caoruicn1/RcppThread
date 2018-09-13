@@ -14,6 +14,36 @@
 #include <memory>
 
 namespace RcppThread {
+    
+    
+struct Batch {
+    ptrdiff_t begin;
+    size_t size;
+};
+
+
+inline size_t computeBatchSize(size_t nTasks, size_t nThreads)
+{
+    if (nTasks < nThreads)
+        return nTasks;
+    return nThreads * (1 + std::floor(std::log(nTasks / nThreads)));
+}
+
+inline std::vector<Batch> createBatches(ptrdiff_t begin, 
+                                        size_t nTasks, 
+                                        size_t nThreads)
+{
+    nThreads = std::max(nThreads, static_cast<size_t>(1));
+    std::vector<Batch> batches(computeBatchSize(nTasks, nThreads));
+    size_t min_size = nTasks / nThreads;
+    ptrdiff_t rem_size = nTasks % nThreads;
+    for (ptrdiff_t i = 0, k = 0; i < nTasks; k++) {
+        batches[k] = Batch{begin + i, min_size + (rem_size-- > 0)};
+        i += batches[k].size;
+    }
+
+    return batches;
+}
 
 //! Implemenation of the thread pool pattern based on `Thread`.
 class ThreadPool {
@@ -120,10 +150,70 @@ public:
     template<class F, class I>
     void map(F&& f, I &&items)
     {
-        for (const auto &item : items)
-            push(f, item);
+        for (auto &&item : items)
+            this->push(f, item);
     }
-
+    
+    //! computes an index-based for loop in parallel batches.
+    //! @param begin first index of the loop.
+    //! @param size the loop runs in the range `[begin, begin + size)`.
+    //! @param f a function (the 'loop body').
+    //! @details Consider the following code: 
+    //! ```
+    //! std::vector<double> x(10);
+    //! for (size_t i = 0; i < x.size(); i++) {
+    //!     x[i] = i;
+    //! }
+    //! ```
+    //! The parallel equivalent is given by: 
+    //! ```
+    //! ThreadPool pool(2);
+    //! pool.forIndex(0, 10, [&] (size_t i) {
+    //!     x[i] = i;
+    //! });
+    //! ```
+    //! **Caution**: if the iterations are not independent from another, 
+    //! the tasks need to be synchonized manually using mutexes.
+    template<class F>
+    inline void forIndex(ptrdiff_t begin, size_t size, F&& f)
+    {
+        auto doBatch = [&] (const Batch& batch) {
+            for (ptrdiff_t i = batch.begin; i < batch.begin + batch.size; i++)
+                f(i);
+        };
+        this->map(doBatch, createBatches(begin, size, pool_.size()));
+    }
+    
+    //! computes a range-based for loop in parallel batches.
+    //! @param items an object allowing for `items.size()` and whose elements
+    //!   are accessed by the `[]` operator.
+    //! @param f a function (the 'loop body').
+    //! @details Consider the following code: 
+    //! ```
+    //! std::vector<double> x(10, 1.0);
+    //! for (auto& xx : x) {
+    //!     xx *= 2;
+    //! }
+    //! ```
+    //! The parallel `ThreadPool` equivalent is 
+    //! ```
+    //! ThreadPool pool(2);
+    //! pool.forEach(x, [&] (double& xx) {
+    //!     xx *= 2;
+    //! });
+    //! ```
+    //! **Caution**: if the iterations are not independent from another, 
+    //! the tasks need to be synchonized manually using mutexes.
+    template<class F, class I>
+    inline void forEach(I&& items, F&& f)
+    {
+        auto doBatch = [&] (const Batch& batch) {
+            for (size_t i = batch.begin; i < batch.begin + batch.size; i++)
+                f(items[i]);
+        };
+        this->map(doBatch, createBatches(0, items.size(), pool_.size()));
+    }
+    
     //! waits for all jobs to finish, but does not join the threads.
     void wait()
     {
