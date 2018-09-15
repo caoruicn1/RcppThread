@@ -7,4 +7,5 @@
 #' @docType package
 #' @useDynLib RcppThread
 #' @importFrom Rcpp sourceCpp
+#' @importFrom RcppParallel RcppParallelLibs
 NULL

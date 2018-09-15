@@ -2,62 +2,71 @@
 // Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #include "../inst/include/RcppThread.h"
+#include <RcppEigen.h>
 #include <Rcpp.h>
 
 using namespace Rcpp;
 
-// testMonitor
-void testMonitor();
-RcppExport SEXP _RcppThread_testMonitor() {
+// parallelMatrixSqrt
+NumericVector parallelMatrixSqrt(NumericVector x);
+RcppExport SEXP _RcppThread_parallelMatrixSqrt(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(parallelMatrixSqrt(x));
+    return rcpp_result_gen;
+END_RCPP
+}
+// parallelMatrixSqrt2
+NumericVector parallelMatrixSqrt2(NumericVector x);
+RcppExport SEXP _RcppThread_parallelMatrixSqrt2(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(parallelMatrixSqrt2(x));
+    return rcpp_result_gen;
+END_RCPP
+}
+// sleep
+void sleep(size_t times);
+RcppExport SEXP _RcppThread_sleep(SEXP timesSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
-    testMonitor();
+    Rcpp::traits::input_parameter< size_t >::type times(timesSEXP);
+    sleep(times);
     return R_NilValue;
 END_RCPP
 }
-// testThreadClass
-void testThreadClass();
-RcppExport SEXP _RcppThread_testThreadClass() {
+// sleep2
+void sleep2(size_t times);
+RcppExport SEXP _RcppThread_sleep2(SEXP timesSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
-    testThreadClass();
+    Rcpp::traits::input_parameter< size_t >::type times(timesSEXP);
+    sleep2(times);
     return R_NilValue;
 END_RCPP
 }
-// testThreadPool
-void testThreadPool();
-RcppExport SEXP _RcppThread_testThreadPool() {
+// test
+std::vector<size_t> test(std::vector<size_t> x);
+RcppExport SEXP _RcppThread_test(SEXP xSEXP) {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    testThreadPool();
-    return R_NilValue;
-END_RCPP
-}
-// testWait
-void testWait();
-RcppExport SEXP _RcppThread_testWait() {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    testWait();
-    return R_NilValue;
-END_RCPP
-}
-// testSingleThreaded
-void testSingleThreaded();
-RcppExport SEXP _RcppThread_testSingleThreaded() {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    testSingleThreaded();
-    return R_NilValue;
+    Rcpp::traits::input_parameter< std::vector<size_t> >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(test(x));
+    return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_RcppThread_testMonitor", (DL_FUNC) &_RcppThread_testMonitor, 0},
-    {"_RcppThread_testThreadClass", (DL_FUNC) &_RcppThread_testThreadClass, 0},
-    {"_RcppThread_testThreadPool", (DL_FUNC) &_RcppThread_testThreadPool, 0},
-    {"_RcppThread_testWait", (DL_FUNC) &_RcppThread_testWait, 0},
-    {"_RcppThread_testSingleThreaded", (DL_FUNC) &_RcppThread_testSingleThreaded, 0},
+    {"_RcppThread_parallelMatrixSqrt", (DL_FUNC) &_RcppThread_parallelMatrixSqrt, 1},
+    {"_RcppThread_parallelMatrixSqrt2", (DL_FUNC) &_RcppThread_parallelMatrixSqrt2, 1},
+    {"_RcppThread_sleep", (DL_FUNC) &_RcppThread_sleep, 1},
+    {"_RcppThread_sleep2", (DL_FUNC) &_RcppThread_sleep2, 1},
+    {"_RcppThread_test", (DL_FUNC) &_RcppThread_test, 1},
     {NULL, NULL, 0}
 };
 
