@@ -23,7 +23,7 @@ struct SquareRoot : public Worker
     // take the square root of the range of elements requested
     void operator()(std::size_t begin, std::size_t end) {
         for (size_t i = begin; i < end; i++) {
-            std::vector<size_t> v(1000000, 1);
+            std::vector<size_t> v(1000, 1);
             output[i] = std::accumulate(v.begin(), v.end(), 0);
         }
     }
@@ -42,7 +42,7 @@ NumericVector parallelMatrixSqrt(NumericVector x) {
 NumericVector parallelMatrixSqrt2(NumericVector x) {
     using namespace RcppThread;
     parallelFor(0, static_cast<size_t>(x.length()), [&] (size_t i) {
-        std::vector<size_t> v(1000000, 1);
+        std::vector<size_t> v(1000, 1);
         x[i] = std::accumulate(v.begin(), v.end(), 0);
     });
     return x;

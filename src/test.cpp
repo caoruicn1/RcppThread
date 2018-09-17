@@ -126,6 +126,6 @@ std::vector<size_t> test(std::vector<size_t> x)
     };
     for (size_t i = 0; i < x.size(); i++)
         pool.push(dummy, i);
-    pool.join();
+    pool.wait();
     return x;
 }

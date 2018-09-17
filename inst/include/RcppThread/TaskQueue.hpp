@@ -6,68 +6,86 @@
 
 #pragma once
 
-#include "RcppThread/Thread.hpp"
-
 #include <vector>
-#include <deque>
-#include <condition_variable>
+#include <atomic>
 #include <memory>
 
 class TaskQueue {
 public:
-    ~TaskQueue()
-    {
-        std::unique_lock<std::mutex> lk(m_);
-    }
-
-public:
+    TaskQueue() : top_{0}, bottom_{0}, jobs_{1024}
+    {}
+    
     template<class F>
     bool pop(F& f) {
-        std::unique_lock<std::mutex> lk{m_};
-        if (jobs_.empty())
+        size_t bottom = bottom_.load(std::memory_order_acquire);
+        if (bottom > 0)
+            bottom--;
+        bottom_.store(bottom, std::memory_order_release);
+        size_t top = top_.load(std::memory_order_acquire);
+        if (top <= bottom) {
+            if (top != bottom) {
+                f = std::move(jobs_[bottom]);
+                return true;
+            } 
+            f = std::move(jobs_[bottom]);
+                
+            if (!top_.compare_exchange_weak(top, top + 1,
+                std::memory_order_acq_rel)) {
+                // Someone already took the last item, abort
+                bottom_.store(top + 1, std::memory_order_release);
+                return false;
+            }
+            
+            bottom_.store(top + 1, std::memory_order_release);
+            return true;
+            
+        } else {
+            bottom_.store(top, std::memory_order_release);
             return false;
-        f = std::move(jobs_.front());
-        jobs_.pop_front();
+        }
+
         return true;
     }
 
     template<class F>
-    void push(F&& f)
+    bool push(F&& f)
     {
-        std::unique_lock<std::mutex> lk{m_};
-        jobs_.emplace_back(std::forward<F>(f));
+        size_t bottom = bottom_.load(std::memory_order_acquire);
+        if (bottom >= jobs_.size())
+            return false;
+        jobs_[bottom] = std::move(f);
+        bottom_.store(bottom + 1, std::memory_order_release);
+        return true;
     }
-
+    
+    // called by stealing thread, not owner thread
     template<class F>
-    bool tryPop(F& f) {
-        if (m_.try_lock()) {
-            if (!jobs_.empty()) {
-                f = std::move(jobs_.front());
-                jobs_.pop_front();
-                m_.unlock();
+    bool steal(F& f)
+    {
+        size_t top = top_.load(std::memory_order_acquire);
+        
+        // Release-Acquire ordering, so the stealing thread see new job
+        size_t bottom = bottom_.load(std::memory_order_acquire);
+        
+        if (bottom > top) {
+            // check if other stealing thread stealing this work 
+            // or owner thread pop this job.
+            // no data should do sync, so use relaxed oreder
+            if (top_.compare_exchange_weak(top, top + 1, std::memory_order_acq_rel)) {
+                f = std::move(jobs_[top]);
                 return true;
             }
-            m_.unlock();
-        }
-        return false;
-    }
-
-    template<typename F>
-    bool tryPush(F&& f) {
-        if (m_.try_lock()) {
-            jobs_.emplace_back(std::forward<F>(f));
-            m_.unlock();
-            return true;
         }
         return false;
     }
 
     bool empty() const
     {
-        return jobs_.empty();
+        return (top_ == bottom_);
     }
 
 private:
-    std::deque<std::function<void()>> jobs_;
-    std::mutex m_;
+    std::atomic<size_t> top_;
+    std::atomic<size_t> bottom_;
+    std::vector<std::function<void()>> jobs_;
 };
